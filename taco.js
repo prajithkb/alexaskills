@@ -26,27 +26,60 @@ String.prototype.replaceAt = function(index, replacement) {
     return this.substr(0, index) + replacement + this.substr(index + replacement.length);
 }
 
-const handlers = {
+var states = {
+    START: '_START', // User is trying to guess the number.
+    END: '_END' // Prompt the user to start or restart the game.
+};
+
+const startStateHandlers = Alexa.CreateStateHandler(states.START, {
+    "NewSession": function() {
+        this.handler.state = states.START;
+        this.emitWithState("BusIntent");
+    },
     'LaunchRequest': function() {
-        this.emit('GetBus');
+        this.handler.state = states.START;
+        this.emitWithState("BusIntent");
     },
     'BusIntent': function() {
         tfl.call(this, this, function(args) {
             if (args.emitType == ":tell") {
                 this.emit(args.emitType, args.speak);
+            } else if (args.emitType == ":tellWithCard") {
+                this.emit(args.emitType, args.speak, args.title, args.content);
             } else {
                 this.emit(args.emitType, args.speak, args.reprompt, args.title, args.content);
             }
         });
-    },
 
-    'CompleteListIntent': function() {
+    },
+    'SessionEndedRequest': function() {
+        console.log('session ended!');
+        this.emit(':saveState', false);
+    }
+
+});
+
+const endStateHandlers = Alexa.CreateStateHandler(states.END, {
+    "NewSession": function() {
+        this.handler.state = states.START;
+        this.emitWithState("BusIntent");
+    },
+    'BusIntent': function() {
         tfl.call(this, this, function(args) {
             if (args.emitType == ":tell") {
                 this.emit(args.emitType, args.speak);
+            } else if (args.emitType == ":tellWithCard") {
+                this.emit(args.emitType, args.speak, args.title, args.content);
             } else {
                 this.emit(args.emitType, args.speak, args.reprompt, args.title, args.content);
             }
+        });
+
+    },
+    'CompleteListIntent': function() {
+        console.log(" in the complete intent")
+        tfl.call(this, this, function(args) {
+            this.emit(":tellWithCard", args.speak, args.title, args.content);
         }, function(buses) {
             var speakableText = "";
             Object.keys(buses).forEach(function(key) {
@@ -55,13 +88,15 @@ const handlers = {
                 s = s.slice(0, lastIndexOfComma) + s.slice(lastIndexOfComma + 1, s.length);
                 s = s.insert(lastIndexOfComma, " and");
                 console.log(s)
-                speakableText += s;
+                speakableText += s + " ";
             });
             return speakableText;
         });
+        this.handler.state = states.END;
 
     },
     'AMAZON.HelpIntent': function() {
+        this.handler.state = states.START;
         this.emit(':ask', "Say, Ask Taco when is the next bus", "Was I able to help?");
     },
     'AMAZON.CancelIntent': function() {
@@ -70,11 +105,74 @@ const handlers = {
     'AMAZON.StopIntent': function() {
         this.emit(':tell', "Ok");
     },
+    "AMAZON.RepeatIntent": function() {
+        this.handler.state = states.START;
+        this.emitWithState("BusIntent");
+    },
+    "YesIntent": function() {
+        console.log("in the yes Int  ent")
+        this.emitWithState('CompleteListIntent');
+    },
+    "AMAZON.NoIntent": function() {
+        this.emit(":tell", "Ok");
+    },
+    "Unhandled": function() {
+        var speechOutput = "Sorry, I am not sure";
+        var reprompt = " Can you please repeat it?";
+        this.emit(":ask", speechOutput + "." + reprompt, reprompt);
+    },
+    'SessionEndedRequest': function() {
+        console.log('session ended!');
+        this.emit(':saveState', false);
+    }
+
+});
+
+var newSessionHandlers = {
+    "NewSession": function() {
+        this.handler.state = states.START;
+        this.emitWithState("BusIntent");
+    },
+    "LaunchRequest": function() {
+        this.handler.state = states.START;
+        this.emitWithState("BusIntent");
+    },
+    'BusIntent': function() {
+        this.handler.state = states.START;
+        console.log("I am here")
+        tfl.call(this, this, function(args) {
+            if (args.emitType == ":tell") {
+                this.emit(args.emitType, args.speak);
+            } else if (args.emitType == ":tellWithCard") {
+                this.emit(args.emitType, args.speak, args.title, args.content);
+            } else {
+                this.emit(args.emitType, args.speak, args.reprompt, args.title, args.content);
+            }
+        });
+
+    },
+    "AMAZON.StartOverIntent": function() {
+        this.handler.state = states.START;
+        this.emitWithState("BusIntent");
+    },
+    "AMAZON.HelpIntent": function() {
+        this.handler.state = states.START;
+        this.emitWithState("AMAZON.HelpIntent");
+    },
+    "Unhandled": function() {
+        var speechOutput = "Sorry, I am not sure ";
+        var reprompt = " Can  please you repeat it?";
+        this.emit(":ask", speechOutput + "." + reprompt, reprompt);
+    },
+    'SessionEndedRequest': function() {
+        console.log('session ended!');
+        this.emit(':saveState', false);
+    }
 };
 
 
 
-function tfl(context, callback, args, speakableText) {
+function tfl(context, callback, speakableText) {
     var options = {
         host: 'api.tfl.gov.uk',
         path: '/StopPoint/490003114S/arrivals',
@@ -123,7 +221,7 @@ function tfl(context, callback, args, speakableText) {
                 });
                 console.log(JSON.stringify(buses));
                 Object.keys(buses).forEach(function(key) {
-                    displayText +=  key + " time(s) (in mins): " + buses[key].join(",") + ".\n";
+                    displayText += "Bus no - " + key + " (in mins): " + buses[key].join(",") + ".\n";
                 });
                 console.log(displayText);
                 speak = "";
@@ -133,18 +231,25 @@ function tfl(context, callback, args, speakableText) {
                     });
                     speak = speak.substring(0, speak.length - 1);
                 } else {
+                    console.log("Using injected speakable text transformer");
                     speak = speakableText(buses);
                 }
                 console.log(JSON.stringify(busesAndTimeRemaining));
-                speak += ". Have a great bus ride!";
+                result.reprompt = ". Do you want to know the complete list?";
                 console.log(speak);
-                result.emitType = ":askWithCard";
+                if (context.handler.state == states.END) {
+                    result.speak = speak;
+                    result.emitType = ":tellWithCard";
+                } else {
+                    context.handler.state = states.END;
+                    result.speak = speak + " " + result.reprompt;
+                    result.emitType = ":askWithCard";
+                }
+
             } catch (e) {
                 console.log("Error ", e);
                 result.emitType = ":tell";
             }
-            result.speak = speak;
-            result.reprompt = "Do you want to know the complete list?";
             result.title = "Your Next Bus";
             result.content = displayText;
             callback.call(context, result);
@@ -160,9 +265,10 @@ function tfl(context, callback, args, speakableText) {
     });
 }
 
+
 exports.handler = function(event, context) {
-    const alexa = Alexa.handler(event, context);
+    var alexa = Alexa.handler(event, context);
     alexa.APP_ID = APP_ID;
-    alexa.registerHandlers(handlers);
+    alexa.registerHandlers(newSessionHandlers, startStateHandlers, endStateHandlers);
     alexa.execute();
 };
