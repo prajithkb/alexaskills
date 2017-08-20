@@ -27,8 +27,8 @@ String.prototype.replaceAt = function(index, replacement) {
 }
 
 var states = {
-    START: '_START', // User is trying to guess the number.
-    END: '_END' // Prompt the user to start or restart the game.
+    START: '_START', 
+    END: '_END' 
 };
 
 const startStateHandlers = Alexa.CreateStateHandler(states.START, {
@@ -114,7 +114,7 @@ const endStateHandlers = Alexa.CreateStateHandler(states.END, {
         this.emitWithState('CompleteListIntent');
     },
     "AMAZON.NoIntent": function() {
-        this.emit(":tell", "Ok");
+        this.emit(":tell", "Ok! have a great bus ride!");
     },
     "Unhandled": function() {
         var speechOutput = "Sorry, I am not sure";
@@ -206,7 +206,7 @@ function tfl(context, callback, speakableText) {
                     //Extract the information which is relevant
                     var b = {
                         "bus": x.lineName,
-                        "timeRemaining": Math.ceil(x.timeToStation / 60)
+                        "timeRemaining": Math.floor(x.timeToStation / 60)
                     };
                     return b;
                 }).forEach(function(x) {
