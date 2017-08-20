@@ -13,6 +13,11 @@
 const Alexa = require('alexa-sdk');
 var https = require('https');
 
+const IMAGE_OBJ = {
+    //smallImageUrl: "https://doc-0c-58-docs.googleusercontent.com/docs/securesc/ha0ro937gcuc7l7deffksulhg5h7mbp1/lq84vmql3lucv8lrnn8no9u9ohil4pml/1503259200000/13772780686574188783/*/0B8zMxlV1F5NZXzFpRVk4LUV3NzQ",
+    largeImageUrl: "https://doc-0c-58-docs.googleusercontent.com/docs/securesc/ha0ro937gcuc7l7deffksulhg5h7mbp1/lq84vmql3lucv8lrnn8no9u9ohil4pml/1503259200000/13772780686574188783/*/0B8zMxlV1F5NZXzFpRVk4LUV3NzQ"
+};
+
 const APP_ID = "amzn1.ask.skill.1fc839fb-5d90-4318-bc32-5e4dc60d61ed"; // TODO replace with your app ID (OPTIONAL).
 
 String.prototype.insert = function(index, string) {
@@ -45,9 +50,9 @@ const startStateHandlers = Alexa.CreateStateHandler(states.START, {
             if (args.emitType == ":tell") {
                 this.emit(args.emitType, args.speak);
             } else if (args.emitType == ":tellWithCard") {
-                this.emit(args.emitType, args.speak, args.title, args.content);
+                this.emit(args.emitType, args.speak, args.title, args.content,IMAGE_OBJ);
             } else {
-                this.emit(args.emitType, args.speak, args.reprompt, args.title, args.content);
+                this.emit(args.emitType, args.speak, args.reprompt, args.title, args.content,IMAGE_OBJ);
             }
         });
 
@@ -69,9 +74,9 @@ const endStateHandlers = Alexa.CreateStateHandler(states.END, {
             if (args.emitType == ":tell") {
                 this.emit(args.emitType, args.speak);
             } else if (args.emitType == ":tellWithCard") {
-                this.emit(args.emitType, args.speak, args.title, args.content);
+                this.emit(args.emitType, args.speak, args.title, args.content,IMAGE_OBJ);
             } else {
-                this.emit(args.emitType, args.speak, args.reprompt, args.title, args.content);
+                this.emit(args.emitType, args.speak, args.reprompt, args.title, args.content,IMAGE_OBJ);
             }
         });
 
@@ -79,7 +84,7 @@ const endStateHandlers = Alexa.CreateStateHandler(states.END, {
     'CompleteListIntent': function() {
         console.log(" in the complete intent")
         tfl.call(this, this, function(args) {
-            this.emit(":tellWithCard", args.speak, args.title, args.content);
+            this.emit(":tellWithCard", args.speak, args.title, args.content,IMAGE_OBJ);
         }, function(buses) {
             var speakableText = "";
             Object.keys(buses).forEach(function(key) {
@@ -110,7 +115,7 @@ const endStateHandlers = Alexa.CreateStateHandler(states.END, {
         this.emitWithState("BusIntent");
     },
     "YesIntent": function() {
-        console.log("in the yes Int  ent")
+        console.log("in the yes Intent")
         this.emitWithState('CompleteListIntent');
     },
     "AMAZON.NoIntent": function() {
@@ -144,9 +149,9 @@ var newSessionHandlers = {
             if (args.emitType == ":tell") {
                 this.emit(args.emitType, args.speak);
             } else if (args.emitType == ":tellWithCard") {
-                this.emit(args.emitType, args.speak, args.title, args.content);
+                this.emit(args.emitType, args.speak, args.title, args.content,IMAGE_OBJ);
             } else {
-                this.emit(args.emitType, args.speak, args.reprompt, args.title, args.content);
+                this.emit(args.emitType, args.speak, args.reprompt, args.title, args.content,IMAGE_OBJ);
             }
         });
 
